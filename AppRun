@@ -1,0 +1,99 @@
+#!/bin/bash
+#clear
+#Set variables:
+HERE="$(dirname "$(readlink -f "${0}")")"
+
+#Product name is used in several places
+PRODUCT="Demo product"
+
+#Installation directory name
+ODIR="demoproduct"
+
+#Product launcher file name
+DNAME="com.demoproduct.desktop"
+
+#Product uninstaller file name
+UDNAME="com.demoproduct.uninstall.desktop"
+
+#.desktop entry description
+COMMENT="Invoke datenshi."
+
+#Name of the executable
+EXECUTABLENAME="exe.sh"
+
+#Icon of the executable
+EXECUTABLEICON="myapp.png"
+#Youshould also edit the .desktop entries on the end of the file ...
+
+#Vrariables that are different if you are root
+if [[ $EUID -ne 0 ]]; then
+   ISROOT=false
+
+   #Default dir to install the application
+   DEFAULTDIR="$HOME/.bin/$ODIR"
+
+   #Complete path to launcher
+   OUTENTRY="$HOME/.local/share/applications/$DNAME"
+
+   #Complete path to uninstaller launcher
+   UOUTENTRY="$HOME/.local/share/applications/$UDNAME"
+
+   #Command prefix to uninstall
+   UNINSTALLCOMMAND=""
+else
+   ISROOT=true
+   DEFAULTDIR="/opt/$ODIR"
+   OUTENTRY="/usr/local/share/applications/$DNAME"
+   UOUTENTRY="/usr/local/share/applications/$UDNAME"
+   UNINSTALLCOMMAND="sudo -k -u root"
+fi
+#This line MUST be uncommented ONLY on packed file
+cd ${HERE}
+echo "This will install $PRODUCT on your computer"
+echo "Type the directory to install and press enter to start the instalation..."
+read -p "==> " -e -i "$DEFAULTDIR" INSTALLDIR
+if [ -d "$INSTALLDIR" ]; then
+   echo "You must specify a non existent directory."
+   exit 1
+fi
+if [ -f "$INSTALLDIR" ]; then
+   echo "You must specify a non existent directory or file."
+   exit 1
+fi
+echo "Installing $PRODUCT on $INSTALLDIR ..."
+mkdir -p  $(dirname ${INSTALLDIR}) 2> /dev/null
+cp -r application ${INSTALLDIR}
+mkdir -p  $(dirname ${OUTENTRY}) 2> /dev/null
+
+#Generate uninstaller
+
+echo "echo \"Press enter to uninstall $PRODUCT ...\"" >> ${INSTALLDIR}/uninstall.sh
+echo "read -p \"Press ctrl+c to cancel\"" >> ${INSTALLDIR}/uninstall.sh
+echo "rm -r $INSTALLDIR" >> ${INSTALLDIR}/uninstall.sh
+echo "rm $OUTENTRY" >> ${INSTALLDIR}/uninstall.sh
+echo "rm $UOUTENTRY" >> ${INSTALLDIR}/uninstall.sh
+
+#Desktop entries
+
+echo "[Desktop Entry]" > ${OUTENTRY}
+echo "Type=Application" >> ${OUTENTRY}
+echo "Version=1.0" >> ${OUTENTRY}
+echo "Name=$PRODUCT" >> ${OUTENTRY}
+echo "Comment=$COMMENT" >> ${OUTENTRY}
+echo "Path=$INSTALLDIR" >> ${OUTENTRY}
+echo "Exec=$INSTALLDIR/$EXECUTABLENAME" >> ${OUTENTRY}
+echo "Icon=$INSTALLDIR/$EXECUTABLEICON" >> ${OUTENTRY}
+echo "Terminal=false" >> ${OUTENTRY}
+#echo "Categories=Education;Languages;Java;" >> ${OUTENTRY}
+
+echo "[Desktop Entry]" > ${UOUTENTRY}
+echo "Type=Application" >> ${UOUTENTRY}
+echo "Version=1.0" >> ${UOUTENTRY}
+echo "Name=Uninstall $PRODUCT" >> ${UOUTENTRY}
+echo "Comment=Uninstall $PRODUCT" >> ${UOUTENTRY}
+echo "Path=$INSTALLDIR" >> ${UOUTENTRY}
+echo "Exec=$UNINSTALLCOMMAND $INSTALLDIR/uninstall.sh" >> ${UOUTENTRY}
+echo "Icon=$INSTALLDIR/uninstall.png" >> ${UOUTENTRY}
+echo "Terminal=true" >> ${UOUTENTRY}
+#echo "Categories=Education;Languages;Java;" >> ${UOUTENTRY}
+
